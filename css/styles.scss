@@ -1,0 +1,57 @@
+// 1. Include functions first (so you can manipulate colors, SVGs, calc, etc)
+@import "../node_modules/bootstrap/scss/functions";
+
+// 2. Include any default variable overrides here
+$link-decoration: none;
+
+// 3. Include remainder of required Bootstrap stylesheets
+@import "../node_modules/bootstrap/scss/variables";
+@import "../node_modules/bootstrap/scss/variables-dark";
+
+// 4. Include any default map overrides here
+$custom-colors: (
+				"farve": $cyan-400,
+);
+
+$theme-colors: map-merge($theme-colors, $custom-colors);
+
+@import "bootstrapComponents";
+
+// 5. Du kan lave styling her...
+/* Generel baggrundsfarve for at matche det mørke tema */
+/* Sikrer, at der ikke er vandret scroll */
+html, body {
+	overflow-x: hidden;  /* Forhindrer vandret scroll */
+	margin: 0;
+	padding: 0;
+	width: 100%;
+}
+
+/* Tilpasning af containeren */
+.container {
+	max-width: 100%; /* Sikrer, at container ikke overstiger skærmens bredde */
+	padding-left: 15px;
+	padding-right: 15px;
+}
+
+/* Tilpasning af logoets størrelse */
+.logo {
+	max-width: 100%;   /* Sørger for, at logoet tilpasses skærmens bredde */
+	height: auto;
+}
+
+/* Tabel tilpasning */
+.table-responsive {
+	max-width: 100%;  /* Sørger for, at tabellen aldrig er bredere end skærmen */
+	overflow-x: auto; /* Hvis tabellen bliver for bred, skabes intern scrolling */
+}
+
+table {
+	width: 100%;   /* Tabel fylder altid 100% af containerens bredde */
+	border-collapse: collapse;
+}
+
+/* Input-boksens størrelse */
+.form-control {
+	max-width: 100%;  /* Sørger for, at input-feltet fylder skærmens bredde */
+}

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <title>Crypta</title>
+
+    <meta name="robots" content="All">
+    <meta name="author" content="Udgiver">
+    <meta name="copyright" content="Information om copyright">
+
+    <link href="css/styles.css" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+<!-- Logo -->
+<div class="container text-center my-4">
+    <img src="img/logo.png" alt="App Logo" class="img-fluid logo">
+</div>
+
+<!-- Søgefelt -->
+<div class="container text-center">
+    <input type="text" id="searchBox" class="form-control w-50 mx-auto" placeholder="Søg kryptovaluta...">
+    <ul id="suggestions" class="list-group mt-2"></ul>
+</div>
+
+
+<!-- Tabel til de 10 største kryptovalutaer -->
+<div class="container mt-4">
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+            <thead class="table-light">
+            <tr>
+                <th>#</th>
+                <th>Coin</th>
+                <th>Pris (DKK)</th>
+                <th>1t</th>
+                <th>24t</th>
+                <th>7d</th>
+                <th>24t Volumen (DKK)</th>
+                <th>Markedsværdi (DKK)</th>
+                <th>Seneste 7 dage</th>
+            </tr>
+            </thead>
+            <tbody id="cryptoTable">
+            <!-- Kryptovaluta-data bliver dynamisk indsat her -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // API-opkald for at hente kryptovalutadata
+    const apiKey = 'CG-CnLBRf3VRrEj7Mnkui3tYDEz';  // Din API-nøgle
+    const apiUrl = 'https://api.coingecko.com/api/v3/coins/markets';
+    const currency = 'dkk';  // Brug DKK for danske kroner
+
+    // Funktion der henter data fra CoinGecko API via Query String-metoden
+    function fetchCryptoData() {
+        fetch(`${apiUrl}?vs_currency=${currency}&order=market_cap_desc&per_page=10&page=1&sparkline=true&price_change_percentage=1h,24h,7d&x_cg_demo_api_key=${apiKey}`)
+            .then(response => response.json())  // Konverterer responsen til JSON
+            .then(data => {
+                updateTable(data);  // Kalder funktionen for at opdatere tabellen med data
+            })
+            .catch(error => {
+                console.error('Fejl i API-kaldet:', error);  // Fejlhåndtering ved problemer med API-kaldet
+            });
+    }
+
+    // Hent kryptodata ved sideindlæsning
+    fetchCryptoData();
+
+    // Opdater data automatisk hvert 60. sekund
+    setInterval(fetchCryptoData, 60000);
+
+
+    // Funktion der opdaterer tabellen med kryptodata og genererer sparklines
+    function updateTable(data) {
+        const tableBody = document.querySelector('#cryptoTable');
+        tableBody.innerHTML = '';  // Tømmer tabellen før ny data tilføjes
+
+        data.forEach((coin, index) => {
+            const priceChange1h = coin.price_change_percentage_1h_in_currency !== null ? coin.price_change_percentage_1h_in_currency.toFixed(2) + '%' : 'N/A';
+            const priceChange24h = coin.price_change_percentage_24h_in_currency !== null ? coin.price_change_percentage_24h_in_currency.toFixed(2) + '%' : 'N/A';
+            const priceChange7d = coin.price_change_percentage_7d_in_currency !== null ? coin.price_change_percentage_7d_in_currency.toFixed(2) + '%' : 'N/A';
+
+            const priceChange1hClass = coin.price_change_percentage_1h_in_currency >= 0 ? 'text-success' : 'text-danger';
+            const priceChange24hClass = coin.price_change_percentage_24h_in_currency >= 0 ? 'text-success' : 'text-danger';
+            const priceChange7dClass = coin.price_change_percentage_7d_in_currency >= 0 ? 'text-success' : 'text-danger';
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+            <td>${index + 1}</td>
+            <td><img src="${coin.image}" alt="${coin.name} logo" class="img-fluid" width="30"> ${coin.name} (${coin.symbol.toUpperCase()})</td>
+            <td>${(coin.current_price).toLocaleString()} kr.</td>
+            <td class="${priceChange1hClass}">${priceChange1h}</td>
+            <td class="${priceChange24hClass}">${priceChange24h}</td>
+            <td class="${priceChange7dClass}">${priceChange7d}</td>
+            <td>${(coin.total_volume).toLocaleString()} kr.</td>
+            <td>${(coin.market_cap).toLocaleString()} kr.</td>
+            <td><canvas id="sparkline-${index}" class="img-fluid" width="80" height="30"></canvas></td>
+        `;
+            tableBody.appendChild(row);
+
+            // Opret sparkline-diagrammer
+            const ctx = document.getElementById(`sparkline-${index}`).getContext('2d');
+            const sparklineData = coin.sparkline_in_7d.price;
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sparklineData.map((_, i) => i),
+                    datasets: [{
+                        data: sparklineData,
+                        borderColor: 'green',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,  // Gør grafen responsiv
+                    maintainAspectRatio: false,  // Tillad dynamisk tilpasning af forholdet
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    },
+                    plugins: { legend: { display: false } },
+                    elements: { line: { tension: 0.4 } }
+                }
+            });
+        });
+    }
+
+
+    // Søgefunktion til at vise forslag
+    document.getElementById('searchBox').addEventListener('input', function() {
+        let query = this.value.toLowerCase();
+
+        if (query.length >= 1) {
+            fetchSuggestions(query);  // Hent forslag ved mindst 2 tegn
+        } else {
+            document.getElementById('suggestions').innerHTML = '';  // Ryd forslag, hvis færre end 2 tegn
+        }
+    });
+
+    // Funktion til at hente forslag fra CoinGecko API
+    function fetchSuggestions(query) {
+        const apiUrl = 'https://api.coingecko.com/api/v3/coins/list';
+
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Netværksfejl');  // Fejlhåndtering
+                }
+                return response.json();
+            })
+            .then(data => {
+                const filteredCoins = data.filter(coin =>
+                    coin.name.toLowerCase().startsWith(query) ||
+                    coin.symbol.toLowerCase().startsWith(query)
+                );
+
+                displaySuggestions(filteredCoins);  // Vis forslag
+            })
+            .catch(error => {
+                console.error('Fejl ved API-kald:', error);  // Fejlhåndtering
+                document.getElementById('suggestions').innerHTML = '<li class="list-group-item">Fejl ved indlæsning af data. Prøv igen senere.</li>';
+            });
+    }
+
+    // Funktion til at vise forslagene som en liste
+    function displaySuggestions(coins) {
+        const suggestionsList = document.getElementById('suggestions');
+        suggestionsList.innerHTML = '';  // Ryd tidligere forslag
+
+        if (coins.length === 0) {
+            suggestionsList.innerHTML = '<li class="list-group-item">Ingen resultater fundet</li>';
+        } else {
+            coins.slice(0, 10).forEach(coin => {
+                const suggestionItem = document.createElement('li');
+                suggestionItem.classList.add('list-group-item');
+                suggestionItem.textContent = `${coin.name} (${coin.symbol.toUpperCase()})`;
+
+                // Klik-event for at vælge forslag
+                suggestionItem.addEventListener('click', () => {
+                    document.getElementById('searchBox').value = coin.name;
+                    suggestionsList.innerHTML = '';  // Ryd forslag ved valg
+                });
+
+                suggestionsList.appendChild(suggestionItem);  // Tilføj forslag til listen
+            });
+        }
+    }
+
+
+</script>
+
+
+</body>
+</html>
